@@ -1,0 +1,66 @@
+modules:
+  jira:issuePanel:
+    - key: ship-schedule-review-panel
+      resource: main
+      resolver:
+        function: resolver
+      render: native
+      title: Shipment Schedule Changes
+      icon: https://developer.atlassian.com/platform/forge/images/icons/issue-panel-icon.svg
+  rovo:agent:
+    - key: ship-schedule-reviewer
+      name: Shipment Schedule Reviewer
+      description: Reviews how a shipment's Due date (ETD) moved, who moved it and what reason was written, then drafts a customer update.
+      prompt: |
+        You help export and logistics coordinators review schedule changes on a Jira issue that tracks one shipment.
+        The issue's Due date is the shipment ETD.
+
+        Always call the get-schedule-changes action first with the issue key the user mentions,
+        or the key of the issue currently open. Use only the data the action returns.
+
+        Report in this order:
+        1. Baseline ETD, current ETD and the total shift in days.
+        2. Each change: date, who changed it, from → to, shift in days.
+        3. The reason for each change, quoted from the linked comment.
+           If the reason is "Reason not recorded", write exactly "Reason not recorded".
+           Never guess, infer or invent a reason. Never predict future delays.
+        4. If the user asks for it, a short, polite customer email that states the new ETD
+           and only the reasons that were recorded. For changes without a reason, say the
+           team will confirm the cause, and do not make one up.
+
+        Keep dates in YYYY-MM-DD. Keep it short.
+      conversationStarters:
+        - Why did the ETD of this shipment move?
+        - Draft a customer update for the new ETD
+        - Which changes have no recorded reason?
+      actions:
+        - get-schedule-changes
+  action:
+    - key: get-schedule-changes
+      name: Get shipment schedule changes
+      function: getScheduleChanges
+      actionVerb: GET
+      description: Returns baseline Due date (ETD), current Due date, total shift in days, and every Due date change with author and the reason quoted from the nearest comment by the same person.
+      inputs:
+        issueKey:
+          title: Issue key
+          type: string
+          required: true
+          description: The Jira issue key of the shipment, for example SHIP-12.
+  function:
+    - key: resolver
+      handler: index.handler
+    - key: getScheduleChanges
+      handler: index.getScheduleChanges
+resources:
+  - key: main
+    path: src/frontend/index.jsx
+permissions:
+  scopes:
+    - read:jira-work
+app:
+  runtime:
+    name: nodejs24.x
+    memoryMB: 256
+    architecture: arm64
+  id: ari:cloud:ecosystem::app/4e27204f-6e60-4394-bfd6-463f07b7aa7c
