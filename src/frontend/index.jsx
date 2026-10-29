@@ -6,10 +6,17 @@ import { invoke } from '@forge/bridge';
 
 const plural = (n) => `${n} day${n === 1 ? '' : 's'}`;
 const fmtShift = (d) => (d === null || d === undefined ? '-' : d > 0 ? `+${plural(d)} later` : d < 0 ? `${plural(-d)} earlier` : 'no change');
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const fmtDay = (ymd) => {
+  if (!ymd) return 'empty';
+  const [, m, d] = ymd.slice(0, 10).split('-').map(Number);
+  return `${MONTHS[m - 1]} ${d}`;
+};
 const fmtTime = (iso) => {
   const t = Date.parse(iso);
-  return Number.isNaN(t) ? '-' : new Date(t).toISOString().slice(0, 16).replace('T', ' ');
+  return Number.isNaN(t) ? '-' : fmtDay(new Date(t).toISOString());
 };
+const fmtShort = (d) => (d === null || d === undefined ? '-' : d > 0 ? `+${d}d` : `${d}d`);
 
 const App = () => {
   const [data, setData] = useState(null);
@@ -35,8 +42,8 @@ const App = () => {
     cells: [
       { key: 'when', content: <Text>{fmtTime(c.changedAt)}</Text> },
       { key: 'who', content: <Text>{c.changedBy}</Text> },
-      { key: 'move', content: <Text>{`${c.from || 'empty'} → ${c.to || 'empty'}`}</Text> },
-      { key: 'shift', content: <Lozenge appearance={c.shiftDays > 0 ? 'removed' : 'success'}>{fmtShift(c.shiftDays)}</Lozenge> },
+      { key: 'move', content: <Text>{`${fmtDay(c.from)} → ${fmtDay(c.to)}`}</Text> },
+      { key: 'shift', content: <Lozenge appearance={c.shiftDays > 0 ? 'removed' : 'success'}>{fmtShort(c.shiftDays)}</Lozenge> },
       {
         key: 'why',
         content: c.reasonLink
@@ -49,8 +56,8 @@ const App = () => {
   return (
     <Stack space="space.200">
       <Inline space="space.200" alignBlock="center">
-        <Text>Baseline <Strong>{data.baseline || '-'}</Strong></Text>
-        <Text>Current <Strong>{data.current || '-'}</Strong></Text>
+        <Text>Baseline ETD <Strong>{data.baseline ? fmtDay(data.baseline) : '-'}</Strong></Text>
+        <Text>Current ETD <Strong>{data.current ? fmtDay(data.current) : '-'}</Strong></Text>
         <Lozenge appearance={data.totalShiftDays > 0 ? 'removed' : 'success'} isBold>{fmtShift(data.totalShiftDays)}</Lozenge>
         <Text>{`${data.changeCount} change(s)`}</Text>
         {data.unexplainedCount > 0 && <Lozenge appearance="moved" isBold>{`${data.unexplainedCount} without reason`}</Lozenge>}
@@ -58,11 +65,11 @@ const App = () => {
       <DynamicTable
         head={{
           cells: [
-            { key: 'when', content: 'Changed at (UTC)' },
-            { key: 'who', content: 'Changed by' },
-            { key: 'move', content: 'Due date' },
+            { key: 'when', content: 'Changed' },
+            { key: 'who', content: 'By' },
+            { key: 'move', content: 'ETD' },
             { key: 'shift', content: 'Shift' },
-            { key: 'why', content: 'Reason (comment)' },
+            { key: 'why', content: 'Reason (from comment)' },
           ],
         }}
         rows={rows}
